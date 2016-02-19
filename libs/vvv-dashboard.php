@@ -276,25 +276,7 @@ class vvv_dashboard {
 
 		$host_info = array();
 		$hosts     = new vvv_dash_hosts();
-
-		// Are these default hosts
-		$type = $hosts->check_host_type( $host );
-
-		if ( isset( $type['key'] ) ) {
-
-			if ( isset( $type['path'] ) ) {
-				$host_info['host']    = $type['key'];
-				$host_info['path']    = $type['path'];
-				$host_info['content'] = '/wp-content';
-			} else {
-				$host_info['host']    = $type['key'];
-				$host_info['path']    = '/';
-				$host_info['content'] = '/wp-content';
-			}
-
-		} else {
-			$host_info = $hosts->get_paths( $host );
-		}
+		$host_info = $hosts->get_paths( $host );
 
 		$env_file              = $hosts->get_env_file( $host_info );
 		$host_info['is_env']   = $hosts->is_env_site( $host_info );

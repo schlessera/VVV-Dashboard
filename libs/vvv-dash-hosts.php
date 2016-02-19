@@ -25,53 +25,6 @@
 class vvv_dash_hosts {
 
 	/**
-	 * Checks to see if its a default host
-	 *
-	 * @author         Jeff Behnke <code@validwebs.com>
-	 * @copyright  (c) 2009-15 ValidWebs.com
-	 *
-	 * Created:    12/2/15, 10:44 AM
-	 *
-	 * @param $host
-	 *
-	 * @return array
-	 */
-	public function check_host_type( $host ) {
-
-		switch ( trim( $host ) ) {
-			case 'local.wordpress.dev' :
-				$host = array(
-					'host' => trim( $host ),
-					'key'  => 'wordpress-default',
-				);
-				break;
-			case 'local.wordpress-trunk.dev' :
-				$host = array(
-					'host' => trim( $host ),
-					'key'  => 'wordpress-trunk',
-				);
-				break;
-			case 'src.wordpress-develop.dev' :
-				$host = array(
-					'host' => trim( $host ),
-					'key'  => 'wordpress-develop',
-					'path' => '/src',
-				);
-				break;
-			case 'build.wordpress-develop.dev' :
-				$host = array(
-					'host' => trim( $host ),
-					'key'  => 'wordpress-develop',
-					'path' => '/build'
-				);
-				break;
-		}
-
-		return $host;
-	}
-
-
-	/**
 	 * Allows setting of alternate wp-content path
 	 *
 	 * @author         Jeff Behnke <code@validwebs.com>
@@ -120,26 +73,25 @@ class vvv_dash_hosts {
 	 */
 	public function get_paths( $host ) {
 
-		$host_info         = array();
-		$host              = strstr( $host, '.', true );
-		$path              = VVV_WEB_ROOT . '/' . $host . '/htdocs';
-		$host_info['host'] = $host;
+		$host_info           = array();
+		list( $host, $path ) = $this->extract_from_nginx( $host );
+		$host_info['host']   = $host;
 
 		if ( is_dir( $path ) ) {
-			$host_info['path']    = '/htdocs';
+			$host_info['path']    = $path;
 			$host_info['content'] = $this->set_content_path( $path );
 
 		} else {
 			global $vvv_dash_scan_paths;
 
 			// Loop through alternate paths
-			foreach ( $vvv_dash_scan_paths as $key => $path ) {
+			foreach ( $vvv_dash_scan_paths as $key => $subfolder ) {
 
 				// Test alternate paths
-				$path_test = VVV_WEB_ROOT . '/' . $host . '/' . $path;
-				if ( is_dir( $path_test ) ) {
+				$path = VVV_WEB_ROOT . '/' . $host . '/' . $subfolder;
+				if ( is_dir( $path ) ) {
 					$host_info['path']    = $path;
-					$host_info['content'] = $this->set_content_path( $path_test );
+					$host_info['content'] = $this->set_content_path( $path );
 				} else {
 					// Something is wrong and we have no paths
 					$host_info['path']    = false;
@@ -149,6 +101,44 @@ class vvv_dash_hosts {
 		}
 
 		return $host_info;
+	}
+
+	/**
+	 * Extract the host's path from the Nginx configuration files
+	 *
+	 * @author     Alain Schlesser <alain.schlesser@gamil.com>
+	 *
+	 * Created:    19/2/16, 07:51 AM
+	 *
+	 * @param $host
+	 *
+	 * @return array
+	 */
+	public function extract_from_nginx( $host ) {
+
+		// VV creates sites under /srv/config/nginx-config/sites/<$site>.conf
+		$files = glob( '/srv/config/nginx-config/sites/*.conf' );
+
+		foreach ( $files as $file ) {
+
+			// Scan the whole file in one go
+			$conf = file_get_contents( $file );
+
+			// Look for a "server { [...] }" block and extract the "server_name" with
+			// our $host and the corresponding "root" path
+			if ( preg_match(
+				"|server\s*{.*server_name\s*($host)\s?.*;.*root\s*(.*?)\s*?;.*}|s",
+				$conf,
+				$matches
+			) ) {
+
+				// If we found a result, we have the correct host
+				return [ $host, $matches[2] ];
+			}
+		}
+
+		// No luck with Nginx configs, fall back to previous behaviour
+		return [ $host, VVV_WEB_ROOT . '/' . $host . '/htdocs' ];
 	}
 
 	/**
@@ -176,7 +166,7 @@ class vvv_dash_hosts {
 		} else {
 			// Normal host
 
-			$file = VVV_WEB_ROOT . '/' . $host_info['host'] . $host_info['path'] . '/wp-config.php';
+			$file = $host_info['path'] . '/wp-config.php';
 
 			if ( file_exists( $file ) ) {
 				return true;
@@ -190,9 +180,6 @@ class vvv_dash_hosts {
 	public function get_wp_starter_configs( $host_info ) {
 
 		$config_array = array();
-
-
-		//$env_file = VVV_WEB_ROOT . '/' . $host_info['host'] . '/.env';
 
 		$env_file  = $this->get_env_file( $host_info );
 		$env_lines = file( $env_file['env_path'] );
@@ -228,7 +215,7 @@ class vvv_dash_hosts {
 
 		$config_array[ $host_info['host'] ] = $env_array;
 		$vars                               = array();
-		$file                               = VVV_WEB_ROOT . '/' . $host_info['host'] . '/' . $host_info['path'] . '/wp-config.php';
+		$file                               = $host_info['path'] . '/wp-config.php';
 		$config_lines                       = file( $file );
 		$array1                             = array_chunk( $config_lines, 70 )[1];
 		$array2                             = array_chunk( $array1, 27 )[0];
@@ -296,7 +283,7 @@ class vvv_dash_hosts {
 		global $vvv_dash_scan_paths;
 
 		$env_file = array();
-		$file     = VVV_WEB_ROOT . '/' . $host_info['host'] . '/.env';
+		$file     = $host_info['path'] . '/.env';
 
 		if ( file_exists( $file ) ) {
 			$env_file['env_path'] = $file;
@@ -304,7 +291,7 @@ class vvv_dash_hosts {
 
 			foreach ( $vvv_dash_scan_paths as $dir ) {
 
-				$file = VVV_WEB_ROOT . '/' . $host_info['host'] . '/' . $dir . '/.env';
+				$file = $host_info['path'] . '/' . $dir . '/.env';
 
 				if ( file_exists( $file ) ) {
 					$env_file['env_path'] = $file;
