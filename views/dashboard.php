@@ -26,8 +26,8 @@
 				if ( isset( $_GET['host'] ) ) {
 
 					$host      = $_GET['host'];
-					$host_info = $vvv_dash->set_host_info( $host );
-					$host_path = VVV_WEB_ROOT . '/' . $host_info['host'] . $host_info['path'];
+					$host_info = vvv_dashboard::get_host_info( $host );
+					$host_path = $host_info['path'];
 					$fav_file  = VVV_WEB_ROOT . '/default/dashboard/favorites/plugins.txt';
 					// Install fav plugins
 					$checkboxes = $vvv_dash->get_fav_list( $fav_file );
@@ -105,8 +105,8 @@
 
 				$host      = $_GET['host'];
 				$domain    = ( isset( $_GET['domain'] ) ) ? $_GET['domain'] : false;
-				$host_info = $vvv_dash->set_host_info( $host );
-				$host_path = VVV_WEB_ROOT . '/' . $host_info['host'] . $host_info['path'];
+				$host_info = vvv_dashboard::get_host_info( $host );
+				$host_path = $host_info['path'];
 
 				if ( $domain ) {
 					$status = $vvv_dash->create_db_backup( $host );
@@ -232,8 +232,8 @@
 
 					if ( isset( $_POST['create_s_theme'] ) ) {
 						$themes_array = get_csv_names( $themes );
-						$host_info    = $vvv_dash->set_host_info( $_POST['host'] );
-						$host_path    = VVV_WEB_ROOT . '/' . $host_info['host'] . $host_info['path'];
+						$host_info    = vvv_dashboard::get_host_info( $_POST['host'] );
+						$host_path    = $host_info['path'];
 						$slug         = strtolower( str_replace( ' ', '_', $_POST['theme_slug'] ) );
 
 						// @ToDo allow this --force
@@ -259,8 +259,8 @@
 
 						$themes_array = get_csv_names( $themes );
 
-						$host_info = $vvv_dash->set_host_info( $_POST['host'] );
-						$host_path = VVV_WEB_ROOT . '/' . $host_info['host'] . $host_info['path'];
+						$host_info = vvv_dashboard::get_host_info( $_POST['host'] );
+						$host_path = $host_info['path'];
 						$child     = strtolower( str_replace( ' ', '_', $_POST['child'] ) );
 
 						if ( in_array( $child, $themes_array ) ) {
@@ -279,7 +279,7 @@
 						}
 					}
 
-					$host_info = $vvv_dash->set_host_info( $_GET['host'] );
+					$host_info = vvv_dashboard::get_host_info( $_GET['host'] );
 					$themes    = $vvv_dash->get_themes_data( $host_info['host'], $host_info['path'] );
 
 					echo format_table( $themes, $_GET['host'], 'themes' );

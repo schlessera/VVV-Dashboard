@@ -38,7 +38,7 @@
 		foreach ( $hosts as $key => $array ) {
 			if ( 'site_count' != $key ) {
 
-				$host_info = $vvv_dash->set_host_info( $array['host'] );
+				$host_info = vvv_dashboard::get_host_info( $array['host'] );
 				$is_env    = ( isset( $host_info['is_env'] ) ) ? $host_info['is_env'] : false;
 
 				$dash_hosts    = new vvv_dash_hosts();
@@ -135,16 +135,10 @@
 							<?php
 						}
 
-						$type = check_host_type( $array['host'] );
+						$host_info = vvv_dashboard::get_host_info( $array['host'] );
 
-						if ( isset( $type['key'] ) ) {
-
-							if ( isset( $type['path'] ) ) {
-								$debug_log_path = VVV_WEB_ROOT . '/' . $type['key'] . '/' . $type['path'] . '/wp-content/debug.log';
-							} else {
-								$debug_log_path = VVV_WEB_ROOT . '/' . $type['key'] . '/wp-content/debug.log';
-							}
-
+						if ( isset( $host_info['path'] ) ) {
+							$debug_log_path = $host_info['path'] . '/wp-content/debug.log';
 						} else {
 							$this_host      = strstr( $array['host'], '.', true );
 							$debug_log_path = VVV_WEB_ROOT . '/' . $this_host . '/htdocs/wp-content/debug.log';

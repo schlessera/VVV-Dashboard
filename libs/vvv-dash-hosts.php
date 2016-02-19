@@ -181,8 +181,8 @@ class vvv_dash_hosts {
 
 		$config_array = array();
 
-		$env_file  = $this->get_env_file( $host_info );
-		$env_lines = file( $env_file['env_path'] );
+		list( $env_path, $is_env ) = $this->check_env_file( $host_info );
+		$env_lines = file( $env_path );
 		$lines     = array_splice( $env_lines, 0, 15 );
 		$env_array = array();
 
@@ -268,25 +268,14 @@ class vvv_dash_hosts {
 		return $config_array;
 	}
 
-	public function is_env_site( $host_info ) {
-
-		$env_path = $this->get_env_file($host_info);
-
-		if ( isset($env_path['env_path']) && ! empty($env_path['env_path']) ) {
-			return true;
-		} else {
-			return false;
-		}
-	}
-
-	public function get_env_file( $host_info ) {
+	public function check_env_file( $host_info ) {
 		global $vvv_dash_scan_paths;
 
-		$env_file = array();
+		$env_path = '';
 		$file     = $host_info['path'] . '/.env';
 
 		if ( file_exists( $file ) ) {
-			$env_file['env_path'] = $file;
+			$env_path = $file;
 		} else {
 
 			foreach ( $vvv_dash_scan_paths as $dir ) {
@@ -294,14 +283,14 @@ class vvv_dash_hosts {
 				$file = $host_info['path'] . '/' . $dir . '/.env';
 
 				if ( file_exists( $file ) ) {
-					$env_file['env_path'] = $file;
+					$env_path = $file;
 				}
 
 			} // end foreach
 			unset( $dir );
 		}
 
-		return $env_file;
+		return [ $env_path, $env_path != '' ? true : false ];
 	}
 }
 // End vvv-dash-hosts.php

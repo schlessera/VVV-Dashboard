@@ -46,21 +46,12 @@ function vvv_dash_wp_backup( $host, $file_name = '' ) {
 
 	if ( isset( $host ) ) {
 
-		$type = check_host_type( $host );
+		$host_info = vvv_dashboard::get_host_info( $host );
 
-		if ( isset( $type['key'] ) ) {
+		if ( isset( $host_info['path'] ) ) {
 
-			if ( isset( $type['path'] ) ) {
-
-				$path        = VVV_WEB_ROOT . '/' . $type['key'] . $type['path'];
-				$db_settings = get_wp_db_settings( $path );
-
-			} else {
-
-				$path        = VVV_WEB_ROOT . '/' . $type['key'] . '/';
-				$db_settings = get_wp_db_settings( $path );
-
-			}
+			$path        = $host_info['path'];
+			$db_settings = get_wp_db_settings( $path );
 
 		} else {
 

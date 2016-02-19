@@ -118,7 +118,7 @@ class vvv_dashboard {
 	 */
 	public function get_host_path( $host ) {
 
-		$host_info = $this->set_host_info( $host );
+		$host_info = vvv_dashboard::get_host_info( $host );
 		$is_env    = ( isset( $host_info['is_env'] ) ) ? $host_info['is_env'] : false;
 
 		// WP Starter
@@ -235,7 +235,7 @@ class vvv_dashboard {
 				}
 			}
 
-			$host_info = $this->set_host_info( $val["host"] );
+			$host_info = vvv_dashboard::get_host_info( $val["host"] );
 			$is_env    = ( isset( $host_info['is_env'] ) ) ? $host_info['is_env'] : false;
 
 			// wp core version --path=<path>
@@ -246,12 +246,12 @@ class vvv_dashboard {
 				$host_path = $host_info['path'];
 			}
 
-			$wp_version               = shell_exec( 'wp core version --path=' . VVV_WEB_ROOT . '/' . $host_info['host'] . $host_path );
+			$wp_version               = shell_exec( 'wp core version --path=' . $host_path );
 			$array[ $key ]['version'] = $wp_version;
 
 			// Causes load issues do to each API call SO this can not be in a loop
 			// @ToDo find a better way
-			//$update_check             = shell_exec( 'wp core check-update --path=' . VVV_WEB_ROOT . '/' . $host_info['host'] . $host_path );
+			//$update_check             = shell_exec( 'wp core check-update --path=' . $host_path );
 			//$array[ $key ]['update']  = $update_check;
 		}
 
@@ -261,7 +261,7 @@ class vvv_dashboard {
 	}
 
 	/**
-	 * Sets an array containing the needed host info
+	 * Gets an array containing the needed host info
 	 *
 	 * @author         Jeff Behnke <code@validwebs.com>
 	 * @copyright  (c) 2009-15 ValidWebs.com
@@ -272,15 +272,13 @@ class vvv_dashboard {
 	 *
 	 * @return array
 	 */
-	public function set_host_info( $host ) {
+	public static function get_host_info( $host ) {
 
 		$host_info = array();
 		$hosts     = new vvv_dash_hosts();
 		$host_info = $hosts->get_paths( $host );
 
-		$env_file              = $hosts->get_env_file( $host_info );
-		$host_info['is_env']   = $hosts->is_env_site( $host_info );
-		$host_info['env_path'] = ( isset( $env_file['env_path'] ) ) ? $env_file['env_path'] : '';
+		list( $host_info['env_path'], $host_info['is_env'] ) = $hosts->check_env_file( $host_info );
 
 		return $host_info;
 	}
@@ -303,7 +301,7 @@ class vvv_dashboard {
 
 		if ( ( $themes = $this->_cache->get( $host . '-themes', VVV_DASH_THEMES_TTL ) ) == false ) {
 
-			$themes = shell_exec( 'wp theme list --path=' . VVV_WEB_ROOT . '/' . $host . $path . ' --format=csv' );
+			$themes = shell_exec( 'wp theme list --path=' . $path . ' --format=csv' );
 
 			// Don't save unless we have data
 			if ( $themes ) {
@@ -329,7 +327,7 @@ class vvv_dashboard {
 	public function get_themes( $get ) {
 		if ( isset( $get['host'] ) && isset( $get['themes'] ) ) {
 			$host_path = $this->get_host_path( $get['host'] );
-			$host_info = $this->set_host_info( $get['host'] );
+			$host_info = vvv_dashboard::get_host_info( $get['host'] );
 			$themes    = $this->get_themes_data( $host_info['host'], $host_path );
 
 			return $themes;
@@ -353,7 +351,7 @@ class vvv_dashboard {
 	public function get_plugins( $get ) {
 		if ( isset( $get['host'] ) && isset( $get['plugins'] ) ) {
 			$host_path = $this->get_host_path( $get['host'] );
-			$host_info = $this->set_host_info( $get['host'] );
+			$host_info = vvv_dashboard::get_host_info( $get['host'] );
 			$plugins   = $this->get_plugins_data( $host_info['host'], $host_path );
 
 			return $plugins;
@@ -379,7 +377,7 @@ class vvv_dashboard {
 
 		if ( ( $plugins = $this->_cache->get( $host . '-plugins', VVV_DASH_PLUGINS_TTL ) ) == false ) {
 
-			$plugins = shell_exec( 'wp plugin list --path=' . VVV_WEB_ROOT . '/' . $host . $path . ' --format=csv --debug ' );
+			$plugins = shell_exec( 'wp plugin list --path=' . $path . ' --format=csv --debug ' );
 
 			// Don't save unless we have data
 			if ( $plugins ) {
@@ -405,9 +403,8 @@ class vvv_dashboard {
 	 * @return bool|string
 	 */
 	public function create_plugin( $post ) {
-		$path      = $this->get_host_path( $post['host'] );
-		$host_info = $this->set_host_info( $post['host'] );
-		$path      = VVV_WEB_ROOT . '/' . $host_info['host'] . $path;
+		$host_info = vvv_dashboard::get_host_info( $post['host'] );
+		$path      = $host_info['path'];
 		$install   = array();
 
 		// wp scaffold plugin my_test_plugin --activate
@@ -474,9 +471,8 @@ class vvv_dashboard {
 	 * @return bool|string
 	 */
 	public function install_fav_items( $post, $type ) {
-		$path      = $this->get_host_path( $post['host'] );
-		$host_info = $this->set_host_info( $post['host'] );
-		$path      = VVV_WEB_ROOT . '/' . $host_info['host'] . $path;
+		$host_info = vvv_dashboard::get_host_info( $post['host'] );
+		$path      = $host_info['path'];
 		$items     = ( isset( $post['checkboxes'] ) ) ? $post['checkboxes'] : false;
 		$install   = array();
 
@@ -492,6 +488,10 @@ class vvv_dashboard {
 	}
 
 	public function get_fav_list( $file_path ) {
+		if ( ! file_exists( $file_path ) ) {
+			return '';
+		}
+
 		$content    = file_get_contents( $file_path );
 		$content    = explode( "\n", $content );
 		$content    = array_filter( $content );
@@ -521,7 +521,7 @@ class vvv_dashboard {
 	 */
 	public function create_db_backup( $host, $file_name = '' ) {
 		$backup_status = false;
-		$host_info     = $this->set_host_info( $host );
+		$host_info     = vvv_dashboard::get_host_info( $host );
 		$is_env        = ( isset( $host_info['is_env'] ) ) ? $host_info['is_env'] : false;
 
 		// Backups for WP Starter
@@ -558,18 +558,18 @@ class vvv_dashboard {
 	 */
 	public function db_roll_back( $host, $file ) {
 
-		$host_info = $this->set_host_info( $host );
+		$host_info = vvv_dashboard::get_host_info( $host );
 		$is_env    = ( isset( $host_info['is_env'] ) ) ? $host_info['is_env'] : false;
 
 		// Backups for WP Starter
 		if ( $is_env ) {
 			// @ToDo fix this path issue
-			$path   = VVV_WEB_ROOT . '/' . $host_info['host'] . '/' . $host_info['path'] . '/wp/';
+			$path   = $host_info['path'] . '/wp/';
 			$status = shell_exec( 'wp db import --path=' . $path . ' ' . urldecode( $file ) );
 
 		} else {
 
-			$path   = VVV_WEB_ROOT . '/' . $host_info['host'] . '/htdocs';
+			$path   = $host_info['path'];
 			$status = shell_exec( 'wp db import --path=' . $path . ' ' . urldecode( $file ) );
 
 		}
@@ -593,16 +593,10 @@ class vvv_dashboard {
 	public function get_wp_debug_log( $get ) {
 		if ( isset( $get['host'] ) && isset( $get['debug_log'] ) ) {
 			$log  = false;
-			$type = check_host_type( $get['host'] );
+			$host_info = vvv_dashboard::get_host_info( $get['host'] );
 
-			if ( isset( $type['key'] ) ) {
-
-				if ( isset( $type['path'] ) ) {
-					$debug_log['path'] = VVV_WEB_ROOT . '/' . $type['key'] . '/' . $type['path'] . '/wp-content/debug.log';
-				} else {
-					$debug_log['path'] = VVV_WEB_ROOT . '/' . $type['key'] . '/wp-content/debug.log';
-				}
-
+			if ( isset( $host_info['path'] ) ) {
+				$debug_log['path'] = $host_info['path'] . '/wp-content/debug.log';
 			} else {
 				$host              = strstr( $get['host'], '.', true );
 				$debug_log['path'] = VVV_WEB_ROOT . '/' . $host . '/htdocs/wp-content/debug.log';
@@ -673,54 +667,34 @@ class vvv_dashboard {
 
 			if ( isset( $_POST['update_item'] ) && isset( $_POST['host'] ) ) {
 
-				$type = check_host_type( $_POST['host'] );
+				$host_info = vvv_dashboard::get_host_info( $_POST['host'] );
 
-				if ( isset( $type['key'] ) ) {
+				if ( isset( $host_info['path'] ) ) {
 
-					if ( isset( $type['path'] ) ) {
+					if ( ! empty( $_POST['type'] ) && 'plugins' == $_POST['type'] ) {
+						$update_status = shell_exec( 'wp plugin update ' . $_POST['item'] . ' --path=' . $host_info['path'] );
+						$purge_status  = $_POST['item'] . ' was updated!<br />';
+						$purge_status .= $this->_cache->purge( '-plugins' );
+						$status = vvv_dash_notice( $purge_status . ' files were purged from cache!' );
+					}
 
-						if ( ! empty( $_POST['type'] ) && 'plugins' == $_POST['type'] ) {
-							$update_status = shell_exec( 'wp plugin update ' . $_POST['item'] . ' --path=' . VVV_WEB_ROOT . '/' . $type['key'] . $type['path'] );
-							$purge_status  = $_POST['item'] . ' was updated!<br />';
-							$purge_status .= $this->_cache->purge( '-plugins' );
-							$status = vvv_dash_notice( $purge_status . ' files were purged from cache!' );
-						}
-
-						if ( ! empty( $_POST['type'] ) && 'themes' == $_POST['type'] ) {
-							$status       = shell_exec( 'wp theme update ' . $_POST['item'] . ' --path=' . VVV_WEB_ROOT . '/' . $type['key'] . $type['path'] );
-							$purge_status = $_POST['item'] . ' was updated!<br />';
-							$purge_status .= $this->_cache->purge( '-themes' );
-							$status = vvv_dash_notice( $purge_status . ' files were purged from cache!' );
-						}
-
-					} else {
-
-						if ( ! empty( $_POST['type'] ) && 'plugins' == $_POST['type'] ) {
-							$update_status = shell_exec( 'wp plugin update ' . $_POST['item'] . ' --path=' . VVV_WEB_ROOT . '/' . $type['key'] . '/' );
-							$purge_status  = $_POST['item'] . ' was updated!<br />';
-							$purge_status .= $this->_cache->purge( '-plugins' );
-							$status = vvv_dash_notice( $purge_status . ' files were purged from cache!' );
-						}
-
-						if ( ! empty( $_POST['type'] ) && 'themes' == $_POST['type'] ) {
-							$update_status = shell_exec( 'wp theme update ' . $_POST['item'] . ' --path=' . VVV_WEB_ROOT . '/' . $type['key'] . '/' );
-							$purge_status  = $_POST['item'] . ' was updated!<br />';
-							$purge_status .= $this->_cache->purge( '-themes' );
-							$status = vvv_dash_notice( $purge_status . ' files were purged from cache!' );
-						}
+					if ( ! empty( $_POST['type'] ) && 'themes' == $_POST['type'] ) {
+						$status       = shell_exec( 'wp theme update ' . $_POST['item'] . ' --path=' . $host_info['path'] );
+						$purge_status = $_POST['item'] . ' was updated!<br />';
+						$purge_status .= $this->_cache->purge( '-themes' );
+						$status = vvv_dash_notice( $purge_status . ' files were purged from cache!' );
 					}
 
 				} else {
-					$host_info = $this->set_host_info( $_POST['host'] );
 					$is_env    = ( isset( $host_info['is_env'] ) ) ? $host_info['is_env'] : false;
 					$host      = $host_info['host'];
 
 					// WP Starter
 					if ( $is_env ) {
-						$host_path = VVV_WEB_ROOT . '/' . $host . '/public/wp';
+						$host_path = $host_info['path'] . '/wp';
 					} else {
 						// Normal WP
-						$host_path = VVV_WEB_ROOT . '/' . $host . '/' . $host_info['path'];
+						$host_path = $host_info['path'];
 					}
 
 					if ( ! empty( $_POST['type'] ) && 'plugins' == $_POST['type'] ) {
