@@ -240,7 +240,7 @@ class vvv_dashboard {
 
 			// wp core version --path=<path>
 			if ( $is_env ) {
-				$host_path = '/public/wp';
+				$host_path = $host_info['path'] . '/wp';
 			} else {
 				// Normal WP
 				$host_path = $host_info['path'];
