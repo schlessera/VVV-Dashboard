@@ -127,7 +127,7 @@ class vvv_dash_hosts {
 			// Look for a "server { [...] }" block and extract the "server_name" with
 			// our $host and the corresponding "root" path
 			if ( preg_match(
-				"|server\s*{.*server_name\s*($host)\s?.*;.*root\s*(.*?)\s*?;.*}|s",
+				"|server\s*?\{.*?server_name\s*?($host)\s*?.*?;.*?root\s*(.*?)\s*?;.*?\}|s",
 				$conf,
 				$matches
 			) ) {
